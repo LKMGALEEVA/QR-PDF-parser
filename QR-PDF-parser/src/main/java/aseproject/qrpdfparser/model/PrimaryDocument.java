@@ -12,7 +12,7 @@ import lombok.Data;
 public class PrimaryDocument {
     @Id
     @GeneratedValue
-    private int id;
+    private Integer id;
     private String title;
-    private int number_of_Pages;
+    private Integer number_of_Pages;
 }

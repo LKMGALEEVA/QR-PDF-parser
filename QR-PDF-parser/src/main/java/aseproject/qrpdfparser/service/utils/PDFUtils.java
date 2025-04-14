@@ -1,14 +1,9 @@
 package aseproject.qrpdfparser.service.utils;
 
-import java.awt.image.BufferedImage;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-
-
 import aseproject.qrpdfparser.QrPdfParserApplication;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.ReaderException;
+import com.google.zxing.Result;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -16,13 +11,28 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-import com.google.zxing.ReaderException;
-import com.google.zxing.Result;
-import org.json.JSONObject;
 
 import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PDFUtils {
+
+    //TODO небезопсаная инициализация
+    static {
+        InputStream is = QrPdfParserApplication.class.getResourceAsStream("/qr-code Error.gif");
+        try {
+            errorImage = ImageIO.read(is);
+            is.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static BufferedImage errorImage;
 
     public static List<Result> getQRResultsFromDocument(PDDocument document) throws IOException {
 
@@ -51,7 +61,7 @@ public class PDFUtils {
             try {
                 results.add(QRDecoder.decodeBufferedImage(image));
             } catch (ReaderException e) {
-                // TODO log this happened but do nothing!
+                // TODO тут нет логики не найденности QR в BufferedImage image
                 System.err.println(e.getMessage());
             }
         }
@@ -61,10 +71,6 @@ public class PDFUtils {
 
     public static List<BufferedImage> getImagesFromDocument(PDDocument document) throws IOException {
 
-        InputStream is = QrPdfParserApplication.class.getResourceAsStream("/qr-code error.gif");
-        //InputStream inputStream = new FileInputStream("C:/Users/HONOR/Desktop/test/qr-code error.gif");
-        BufferedImage errorImage = ImageIO.read(is);
-
         List<BufferedImage> images = new ArrayList<>();
 
         for (PDPage page : document.getPages()) {
@@ -73,7 +79,6 @@ public class PDFUtils {
             }
             images.addAll(getImagesFromPage(page));
         }
-        is.close();
 
         return images;
     }

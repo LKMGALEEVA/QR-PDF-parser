@@ -1,5 +1,7 @@
 package aseproject.qrpdfparser;
 
+import aseproject.qrpdfparser.model.User;
+import aseproject.qrpdfparser.service.AppService;
 import jakarta.servlet.MultipartConfigElement;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,7 +15,6 @@ import java.io.IOException;
 @SpringBootApplication
 public class QrPdfParserApplication {
 
-
     @Bean
     public MultipartConfigElement multipartConfigElement() {
         MultipartConfigFactory factory = new MultipartConfigFactory();
@@ -24,7 +25,6 @@ public class QrPdfParserApplication {
 
 
     public static void main(String[] args) throws IOException {
-        SpringApplication.run(QrPdfParserApplication.class, args);
-
+        var contex = SpringApplication.run(QrPdfParserApplication.class, args);
     }
 }

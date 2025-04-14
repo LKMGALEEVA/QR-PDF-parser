@@ -13,6 +13,6 @@ public class Document {
     private String KKS;
     private String revision;
     private String title;
-    private int number_of_Pages;
+    private Integer number_of_Pages;
 
 }

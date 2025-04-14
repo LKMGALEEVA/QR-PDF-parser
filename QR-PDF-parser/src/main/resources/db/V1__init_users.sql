@@ -1,4 +1,4 @@
-INSERT INTO users (user_id, name, password, role)
+INSERT INTO users (name, password, roles)
 VALUES
-    (1, 'user', 'user', 'ROLE_USER'),
-    (2, 'admin', 'admin', 'ROLE_USER');
+    ('user', '$2a$10$H0UFuQZNBp31uXmCzNGlVuShCbgQc1wL0vfKjSgAw4k5N64xyceOO', 'ROLE_USER'),
+    ('admin', '$2a$10$JLwV2mOVEMYqP6QkObSjEu5eF7bLKHWtx9M1Na9aX2vuDtxod4aVS', 'ROLE_USER');

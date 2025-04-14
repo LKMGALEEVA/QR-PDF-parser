@@ -1,9 +1,0 @@
-Manifest-Version: 1.0
-Created-By: IntelliJ IDEA
-Built-By: HONOR
-Build-Jdk: Oracle OpenJDK 23
-Implementation-Title: QR-PDF-parser
-Implementation-Version: 0.0.1-SNAPSHOT
-Implementation-Vendor-Id: ASEproject
-Main-Class: ${start-class}
-

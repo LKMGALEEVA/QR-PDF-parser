@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/QR_PDF_parser
-    username: postgres
-    password: 7890
+    url: jdbc:postgresql://localhost:5432/qr_pdf_parser
+    username:
+    password:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

@@ -1,9 +1,12 @@
 package aseproject.qrpdfparser.controller;
 
+import aseproject.qrpdfparser.dto.ErrorQrDTO;
+import aseproject.qrpdfparser.dto.StatusDTO;
 import aseproject.qrpdfparser.model.User;
 import aseproject.qrpdfparser.service.AppService;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.AllArgsConstructor;
+import org.apache.commons.io.FileUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,76 +14,70 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.awt.*;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.zip.ZipOutputStream;
-import org.apache.commons.io.FileUtils;
-
-import static aseproject.qrpdfparser.service.AppService.docsToZip;
 
 
 @RestController
-//@RequestMapping("api/v1/QRdocs")
-@AllArgsConstructor
 public class FileUploadController {
 
     private AppService appService;
+    private String sourceFile;
 
+    @Autowired
+    public FileUploadController(AppService appService) {
+        this.appService = appService;
+        this.sourceFile = "src/main/resources/files";
+    }
+
+    //TODO тут может быть ошибка с name полем (проеврить на занчи запрешённые и по-хорошему бы запретить пробелы, но с ними работать будет так-то)
     @PreAuthorize("hasAuthority('ROLE_USER')")
     @RequestMapping(value = "/upload", method = RequestMethod.POST)
-    public @ResponseBody String handleFileUpload(@RequestParam("name") String name,
-                                                 @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> handleFileUpload(@RequestParam("name") String name,
+                                              @RequestParam("file") MultipartFile file) {
+        StatusDTO<String> statusSaveFile = appService.saveFileInFileSystem(name, file);
 
-        if (!file.isEmpty()) {
-            try {
-                byte[] bytes = file.getBytes();
-                BufferedOutputStream stream =
-                        new BufferedOutputStream(new FileOutputStream(new File(name + ".pdf")));
-                stream.write(bytes);
-                stream.close();
-                String path = name + ".pdf";
+        if (statusSaveFile.getCode() == 200) {
+            StatusDTO<ErrorQrDTO> errorQrDTOStatusDTO = appService.parseDocuments(statusSaveFile.getBody());
 
-                appService.ParseDocuments(path);
-
-                return "Файл загружен и разделен успешно!";
-
-            } catch (Exception e) {
-                return "Что-то не то";
-            }
-        } else {
-            return "Что-то не то";
+            return ResponseEntity.status(errorQrDTOStatusDTO.getCode())
+                    .body(errorQrDTOStatusDTO.getBody());
         }
+        return ResponseEntity.status(500)
+                .body(statusSaveFile.getMessage());
     }
 
 
     @PreAuthorize("hasAuthority('ROLE_USER')")
     @GetMapping("/download/stream")
     public void downloadZipStream(HttpServletResponse response) throws IOException {
-        String sourceFile = "src/main/resources/files";
+        //TODO вынести логику из контроллера в сервис и репозитории
         File fileToZip = new File(sourceFile);
-
         response.setContentType("application/zip");
         response.setHeader("Content-Disposition", "attachment; filename=files.zip");
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
-            docsToZip(fileToZip, fileToZip.getName(), zipOutputStream);
+            appService.docsToZip(fileToZip, fileToZip.getName(), zipOutputStream);
         }
 
         FileUtils.deleteDirectory(new File("src/main/resources/files"));
     }
 
+    @Deprecated
     @PreAuthorize("hasAuthority('ROLE_USER')")
     @GetMapping("/download")
     public ResponseEntity<?> downloadZip() throws IOException {
-        String sourceFile = "src/main/resources/files";
+        File fileToZip = new File(sourceFile);
+
+        //TODO удалить из корня zip файл?
         String tmpZipFilename = "zipFiles";
         FileOutputStream fos = new FileOutputStream(tmpZipFilename);
         ZipOutputStream zipOut = new ZipOutputStream(fos);
-        File fileToZip = new File(sourceFile);
-        docsToZip(fileToZip, fileToZip.getName(), zipOut);
+
+        appService.docsToZip(fileToZip, fileToZip.getName(), zipOut);
         zipOut.close();
         fos.close();
 
@@ -96,8 +93,20 @@ public class FileUploadController {
                 .ok()
                 .headers(responseHeaders)
                 .body(fileByte);
+    }
 
+    @PostMapping("/new-user")
+    public String addUser(@RequestBody User user) {
+        appService.addUser(user);
+        return "User is saved!";
+    }
 
+    @GetMapping("/openPdf")
+    public void openPdf() throws IOException {
+        Desktop desktop = Desktop.getDesktop();
+        //TODO это очень старнно
+        File file = new File("C:/Users/HONOR/Download/169-292-1-SM.pdf");
+        desktop.open(file);
     }
 
     //@PreAuthorize("hasAuthority('ROLE_USER')")
@@ -112,20 +121,6 @@ public class FileUploadController {
 //        appService.parseByHand(name, page_id);
 //        return "Cтраница добавлена в документ " + name + ".pdf";
 //    }
-
-    @PostMapping("/new-user")
-    public String addUser(@RequestBody User user) {
-        appService.addUser(user);
-        return "User is saved!";
-    }
-
-
-    @GetMapping("/openPdf")
-    public void openPdf() throws IOException {
-        Desktop desktop = Desktop.getDesktop();
-        File file = new File("C:/Users/HONOR/Download/169-292-1-SM.pdf");
-        desktop.open(file);
-    }
 
 
 }
