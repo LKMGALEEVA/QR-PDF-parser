@@ -37,18 +37,18 @@ public class FileUploadController {
     //TODO тут может быть ошибка с name полем (проеврить на занчи запрешённые и по-хорошему бы запретить пробелы, но с ними работать будет так-то)
     @PreAuthorize("hasAuthority('ROLE_USER')")
     @RequestMapping(value = "/upload", method = RequestMethod.POST)
-    public ResponseEntity<?> handleFileUpload(@RequestParam("name") String name,
-                                              @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<StatusDTO<ErrorQrDTO>> handleFileUpload(@RequestParam("name") String name,
+                                                                  @RequestParam("file") MultipartFile file) {
         StatusDTO<String> statusSaveFile = appService.saveFileInFileSystem(name, file);
 
         if (statusSaveFile.getCode() == 200) {
             StatusDTO<ErrorQrDTO> errorQrDTOStatusDTO = appService.parseDocuments(statusSaveFile.getBody());
 
             return ResponseEntity.status(errorQrDTOStatusDTO.getCode())
-                    .body(errorQrDTOStatusDTO.getBody());
+                    .body(errorQrDTOStatusDTO);
         }
         return ResponseEntity.status(500)
-                .body(statusSaveFile.getMessage());
+                .body(new StatusDTO<>(statusSaveFile.getCode(), statusSaveFile.getMessage()));
     }
 
 
