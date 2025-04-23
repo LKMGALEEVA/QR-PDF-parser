@@ -1,6 +1,7 @@
 package aseproject.qrpdfparser.service;
 
-import aseproject.qrpdfparser.dto.ErrorQrDTO;
+import aseproject.qrpdfparser.dto.ErrorQrRequestDTO;
+import aseproject.qrpdfparser.dto.ErrorQrResponseDTO;
 import aseproject.qrpdfparser.dto.StatusDTO;
 import aseproject.qrpdfparser.model.User;
 import aseproject.qrpdfparser.repository.UserRepository;
@@ -9,6 +10,7 @@ import aseproject.qrpdfparser.service.utils.PDFUtils;
 import aseproject.qrpdfparser.service.utils.QRDecoder;
 import com.google.zxing.Result;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -58,7 +60,7 @@ public class AppService {
         return new StatusDTO<>(500, "Ошибка сервера: " + "файл не сохранился");
     }
 
-    public StatusDTO<ErrorQrDTO> parseDocuments(String path) {
+    public StatusDTO<ErrorQrResponseDTO> parseDocuments(String path) {
         PDDocument document = null;
         try (InputStream inputStream = new FileInputStream(path)) {
             document = PDDocument.load(inputStream);
@@ -67,12 +69,12 @@ public class AppService {
             Map<String, PDDocument> filesOnQrTypeMap = createFilesOnQrTypeMap(document, qrFromDocList);
             fileSystemRepository.saveFilesOnQr(document, qrFromDocList, filesOnQrTypeMap);
 
-            byte[] errorQrFile = fileSystemRepository.errorDoc();
+            byte[] errorQrFile = fileSystemRepository.getErrorDocToByte();
             if (errorQrFile != null) {
                 List<String> listQrName = filesOnQrTypeMap.keySet().stream()
                         .map(QRDecoder::getNormalStringFromJsonString)
                         .toList();
-                return new StatusDTO<>(200, new ErrorQrDTO(listQrName, errorQrFile));
+                return new StatusDTO<>(200, new ErrorQrResponseDTO(listQrName, errorQrFile));
             } else {
                 return new StatusDTO<>(200, null);
             }
@@ -99,6 +101,83 @@ public class AppService {
 
         return filesOnQrTypeMap;
     }
+
+    public StatusDTO<Void> definiteQrType(ErrorQrRequestDTO errorQrRequestDTO) {
+        String nameFile = generateFileName(errorQrRequestDTO);
+        PDDocument document = getOrCreateMainDocument(nameFile, errorQrRequestDTO.getIsDefiniteQrType());
+        if (document == null) {
+            return new StatusDTO<>(500, "Ошибка получения основного документа");
+        }
+
+        PDDocument errorDoc;
+        try {
+            errorDoc = fileSystemRepository.getErrorDocToObj();
+        } catch (IOException e) {
+            return new StatusDTO<>(500, "Ошибка получения файла с неопределёнными QR");
+        }
+        PDDocument newErrorDoc = transferErrorPage(errorDoc, document, errorQrRequestDTO.getIndexErrorPage());
+
+        try {
+            fileSystemRepository.saveDocumentByName(nameFile, document);
+            fileSystemRepository.saveErrorDoc(newErrorDoc);
+            document.close();
+            newErrorDoc.close();
+            errorDoc.close();
+        } catch (IOException e) {
+            return new StatusDTO<>(500, "Ошибка сохранения файла");
+        }
+
+        return new StatusDTO<>(200, "Успешное переопределение страницы");
+    }
+
+    private String generateFileName(ErrorQrRequestDTO dto) {
+        if (dto.getIsDefiniteQrType()) {
+            return dto.getDefiniteQrType();
+        }
+        return String.join("_",
+                dto.getKksCode(),
+                dto.getWorkType(),
+                dto.getDocType(),
+                String.valueOf(dto.getVersion()));
+    }
+
+    private PDDocument getOrCreateMainDocument(String nameFile, boolean isDefinite) {
+        PDDocument document = null;
+        if (isDefinite) {
+            try {
+                document = fileSystemRepository.getDocumentByName(nameFile);
+            } catch (IOException e) {
+                return null;
+            }
+        } else {
+            try {
+                PDDocument doc = fileSystemRepository.getDocumentByName(nameFile);
+                if (doc != null) {
+                    document = doc;
+                } else {
+                    document = new PDDocument();
+                }
+            } catch (Exception e) {
+                document = new PDDocument();
+            }
+        }
+        return document;
+    }
+
+    private PDDocument transferErrorPage(PDDocument errorDoc, PDDocument mainDoc, int indexToTransfer) {
+        PDDocument newErrorDoc = new PDDocument();
+        PDPage errorPage = errorDoc.getPage(indexToTransfer);
+
+        for (int i = 0; i < errorDoc.getNumberOfPages(); i++) {
+            if (i != indexToTransfer) {
+                newErrorDoc.addPage(errorDoc.getPage(i));
+            } else {
+                mainDoc.addPage(errorPage);
+            }
+        }
+        return newErrorDoc;
+    }
+
 
     public void docsToZip(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
         if (fileToZip.isHidden()) {
@@ -131,55 +210,5 @@ public class AppService {
         fis.close();
 
     }
-
-//    public Set<String> getAllDocuments() {
-//        try (InputStream inputStream = new FileInputStream("C://IdeaProjects/test.pdf")) {   //исправить, надо передавать путь к папке
-//            // парсим док
-//            PDDocument document = null;
-//            document = PDDocument.load(inputStream);
-//
-//            //int number_of_pages = document.getNumberOfPages();
-//
-//            DictCreation myDict = new DictCreation();
-//            Map<String, PDDocument> diction = myDict.createDictionary(document);
-//
-//            Set<String> documentNames = diction.keySet();
-//            document.close();
-//            return documentNames;
-//        }catch (IOException e) {
-//            //e.printStackTrace();
-//        }
-//        return null;
-//        }
-//
-//    public void parseByHand(String docName, String page_id) throws IOException {
-//        try {
-//
-//            InputStream inputStream = new FileInputStream("C://IdeaProjects//testDocs/3.pdf"); //надо исправить, передавать название документа, который надо распарсить
-//            PDDocument documentWithErrors = null;
-//            documentWithErrors = PDDocument.load(inputStream);
-//
-//            InputStream inputStream1 = new FileInputStream("C://IdeaProjects/test.pdf"); //надо исправить, передавать название документа, который надо распарсить
-//            PDDocument primaryDocument = null;
-//            primaryDocument= PDDocument.load(inputStream1);
-//
-//            DictCreation myDict = new DictCreation();
-//            Map<String, PDDocument> QRDict = myDict.createDictionary(primaryDocument);  //нужен словарь со всеми документами
-//
-//            PDDocument tempdoc = QRDict.get(docName); //docName - содержание qr кода
-//            tempdoc.addPage(documentWithErrors.getPage(Integer.parseInt(page_id)));
-//
-//            tempdoc.save("C://IdeaProjects//testDocs/" + docName + ".pdf");
-//            tempdoc.close();
-//            documentWithErrors.close();
-//            primaryDocument.close();
-//
-//        } catch (IOException e) {
-//            //e.printStackTrace();
-//        }
-//    }
-//    public void addDoc(Document doc){
-//        docsRepository.save(doc);
-//    }
 }
 

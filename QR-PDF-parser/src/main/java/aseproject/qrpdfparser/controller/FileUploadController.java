@@ -1,6 +1,7 @@
 package aseproject.qrpdfparser.controller;
 
-import aseproject.qrpdfparser.dto.ErrorQrDTO;
+import aseproject.qrpdfparser.dto.ErrorQrRequestDTO;
+import aseproject.qrpdfparser.dto.ErrorQrResponseDTO;
 import aseproject.qrpdfparser.dto.StatusDTO;
 import aseproject.qrpdfparser.model.User;
 import aseproject.qrpdfparser.service.AppService;
@@ -13,7 +14,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -37,18 +37,27 @@ public class FileUploadController {
     //TODO тут может быть ошибка с name полем (проеврить на занчи запрешённые и по-хорошему бы запретить пробелы, но с ними работать будет так-то)
     @PreAuthorize("hasAuthority('ROLE_USER')")
     @RequestMapping(value = "/upload", method = RequestMethod.POST)
-    public ResponseEntity<StatusDTO<ErrorQrDTO>> handleFileUpload(@RequestParam("name") String name,
-                                                                  @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<StatusDTO<ErrorQrResponseDTO>> handleFileUpload(@RequestParam("name") String name,
+                                                                          @RequestParam("file") MultipartFile file) {
         StatusDTO<String> statusSaveFile = appService.saveFileInFileSystem(name, file);
 
         if (statusSaveFile.getCode() == 200) {
-            StatusDTO<ErrorQrDTO> errorQrDTOStatusDTO = appService.parseDocuments(statusSaveFile.getBody());
+            StatusDTO<ErrorQrResponseDTO> errorQrDTOStatusDTO = appService.parseDocuments(statusSaveFile.getBody());
 
             return ResponseEntity.status(errorQrDTOStatusDTO.getCode())
                     .body(errorQrDTOStatusDTO);
         }
         return ResponseEntity.status(500)
                 .body(new StatusDTO<>(statusSaveFile.getCode(), statusSaveFile.getMessage()));
+    }
+
+
+    @PreAuthorize("hasAuthority('ROLE_USER')")
+    @RequestMapping(value = "/definitePage", method = RequestMethod.POST)
+    public ResponseEntity<String> handleErrorQrPage(
+            @RequestBody ErrorQrRequestDTO errorQrRequestDTO) {
+        StatusDTO<Void> statusDTO = appService.definiteQrType(errorQrRequestDTO);
+        return ResponseEntity.status(statusDTO.getCode()).body(statusDTO.getMessage());
     }
 
 
@@ -100,27 +109,5 @@ public class FileUploadController {
         appService.addUser(user);
         return "User is saved!";
     }
-
-    @GetMapping("/openPdf")
-    public void openPdf() throws IOException {
-        Desktop desktop = Desktop.getDesktop();
-        //TODO это очень старнно
-        File file = new File("C:/Users/HONOR/Download/169-292-1-SM.pdf");
-        desktop.open(file);
-    }
-
-    //@PreAuthorize("hasAuthority('ROLE_USER')")
-//    @GetMapping("/all-docs")
-//    public Set<String> getAllDocuments(){
-//        return appService.getAllDocuments();
-//    }
-
-//    @PreAuthorize("hasAuthority('ROLE_USER')")
-//    @GetMapping("/page{page_id}")
-//    public String parseByHand(@RequestBody String name, @PathVariable String page_id) throws IOException {
-//        appService.parseByHand(name, page_id);
-//        return "Cтраница добавлена в документ " + name + ".pdf";
-//    }
-
 
 }
