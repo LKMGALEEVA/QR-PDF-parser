@@ -20,7 +20,7 @@ CREATE TABLE users
 (
     user_id  SERIAL PRIMARY KEY,
     name     VARCHAR(50),
-    password VARCHAR(50),
+    password VARCHAR(150),
     roles    VARCHAR(50)
 );
 
