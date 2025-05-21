@@ -34,11 +34,12 @@ public class SecurityConfig {
 //                .formLogin(AbstractAuthenticationFilterConfigurer::permitAll)
 //                .build();
         return http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/index.html", "/new-user").permitAll()
-                        .requestMatchers("/**").authenticated())
-                .formLogin(formLogin -> formLogin
-                        .loginProcessingUrl("/login")
-                        .defaultSuccessUrl("/index.html", true))
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/index.html", "/new-user").permitAll())
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/**").permitAll())
+//                        .requestMatchers("/**").authenticated())
+//                .formLogin(formLogin -> formLogin
+//                        .loginProcessingUrl("/login")
+//                        .defaultSuccessUrl("/index.html", true))
                 .build();
 
     }

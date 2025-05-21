@@ -35,7 +35,7 @@ public class FileUploadController {
     }
 
     //TODO тут может быть ошибка с name полем (проеврить на занчи запрешённые и по-хорошему бы запретить пробелы, но с ними работать будет так-то)
-    @PreAuthorize("hasAuthority('ROLE_USER')")
+//    @PreAuthorize("hasAuthority('ROLE_USER')")
     @RequestMapping(value = "/upload", method = RequestMethod.POST)
     public ResponseEntity<StatusDTO<ErrorQrResponseDTO>> handleFileUpload(@RequestParam("name") String name,
                                                                           @RequestParam("file") MultipartFile file) {
@@ -52,7 +52,7 @@ public class FileUploadController {
     }
 
 
-    @PreAuthorize("hasAuthority('ROLE_USER')")
+//    @PreAuthorize("hasAuthority('ROLE_USER')")
     @RequestMapping(value = "/definitePage", method = RequestMethod.POST)
     public ResponseEntity<String> handleErrorQrPage(
             @RequestBody ErrorQrRequestDTO errorQrRequestDTO) {
@@ -61,7 +61,7 @@ public class FileUploadController {
     }
 
 
-    @PreAuthorize("hasAuthority('ROLE_USER')")
+//    @PreAuthorize("hasAuthority('ROLE_USER')")
     @GetMapping("/download/stream")
     public void downloadZipStream(HttpServletResponse response) throws IOException {
         //TODO вынести логику из контроллера в сервис и репозитории
@@ -76,7 +76,7 @@ public class FileUploadController {
     }
 
     @Deprecated
-    @PreAuthorize("hasAuthority('ROLE_USER')")
+//    @PreAuthorize("hasAuthority('ROLE_USER')")
     @GetMapping("/download")
     public ResponseEntity<?> downloadZip() throws IOException {
         File fileToZip = new File(sourceFile);
